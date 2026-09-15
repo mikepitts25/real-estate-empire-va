@@ -1,0 +1,12 @@
+{
+  "name": "real-estate-empire-va",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VA Home Loan Real Estate Empire - a self-paced training program teaching veterans how to build a rental portfolio with little to no money down.",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "node build.js && node -e \"const h=require('http'),f=require('fs'),p=require('path');const r='dist';h.createServer((q,s)=>{let u=decodeURIComponent(q.url.split('?')[0]);let fp=p.join(r,u);if(f.existsSync(fp)&&f.statSync(fp).isDirectory())fp=p.join(fp,'index.html');if(!f.existsSync(fp)){s.writeHead(404);return s.end('404');}const t={'.html':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.json':'application/json'}[p.extname(fp)]||'application/octet-stream';s.writeHead(200,{'content-type':t});s.end(f.readFileSync(fp));}).listen(8080,()=>console.log('http://localhost:8080'));\"",
+    "test": "node test/build.test.js"
+  },
+  "license": "MIT"
+}
