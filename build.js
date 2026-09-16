@@ -280,16 +280,19 @@ function navHtml(pages, current) {
     .join('');
 }
 
-/** Relative link from one page to another so the site works at any base path. */
+/**
+ * Relative link from one page to another. Every page is emitted flat at the root
+ * of dist/, so a bare filename is correct from any page and keeps the site working
+ * under a project subpath like /repo-name/ on GitHub Pages.
+ */
 function rel(fromSlug, toUrl) {
-  const depth = fromSlug === 'index' ? 0 : 1;
-  const prefix = depth === 0 ? '' : '../';
-  return prefix + toUrl;
+  return toUrl;
 }
 
 function layout({ page, pages, contentHtml, headings, prev, next }) {
   const current = page.slug;
-  const base = current === 'index' ? '' : '../';
+  // Flat output: assets sit beside the pages, so never walk up out of the site root.
+  const base = '';
   const toc = headings.filter((h) => h.level === 2);
   const canonical = SITE.baseUrl ? `${SITE.baseUrl.replace(/\/$/, '')}/${page.url === 'index.html' ? '' : page.url}` : '';
 

@@ -111,19 +111,46 @@ test('no unrendered markdown or control characters leak into output', () => {
   });
 });
 
+/** Every href and src on a page, minus external, anchor-only, and mailto links. */
+function localRefs(html) {
+  return [...html.matchAll(/(?:href|src)="([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((h) => !/^(https?:|#|mailto:|data:)/.test(h));
+}
+
 test('internal links resolve to real files', () => {
   const missing = [];
   files.filter((f) => f.endsWith('.html')).forEach((f) => {
-    const html = fs.readFileSync(path.join(dist, f), 'utf8');
-    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
-    hrefs
-      .filter((h) => !/^(https?:|#|mailto:)/.test(h))
-      .forEach((h) => {
-        const target = path.join(dist, h.replace(/^\.\.\//, '').split('#')[0]);
-        if (!fs.existsSync(target)) missing.push(`${f} -> ${h}`);
-      });
+    // Resolve exactly as a browser would, relative to the page's own location.
+    // Do NOT normalize away "../" here — that is the bug this test exists to catch.
+    localRefs(fs.readFileSync(path.join(dist, f), 'utf8')).forEach((h) => {
+      const target = path.resolve(path.dirname(path.join(dist, f)), h.split('#')[0]);
+      if (!fs.existsSync(target)) missing.push(`${f} -> ${h}`);
+    });
   });
   assert.strictEqual(missing.length, 0, `broken links: ${missing.join(', ')}`);
+});
+
+test('no link escapes the site root or assumes a domain-root deploy', () => {
+  // GitHub Pages serves a project site under /<repo>/, so a link starting with
+  // "/" or "../" leaves the site and 404s even though it works locally at "/".
+  const bad = [];
+  files.filter((f) => f.endsWith('.html')).forEach((f) => {
+    localRefs(fs.readFileSync(path.join(dist, f), 'utf8')).forEach((h) => {
+      if (h.startsWith('/') || h.startsWith('../')) bad.push(`${f} -> ${h}`);
+      const target = path.resolve(path.dirname(path.join(dist, f)), h.split('#')[0]);
+      if (!target.startsWith(dist)) bad.push(`${f} -> ${h} (outside dist)`);
+    });
+  });
+  assert.strictEqual(bad.length, 0, `links that break under a subpath: ${bad.join(', ')}`);
+});
+
+test('every page links to its stylesheet and script', () => {
+  files.filter((f) => f.endsWith('.html')).forEach((f) => {
+    const html = fs.readFileSync(path.join(dist, f), 'utf8');
+    assert.ok(html.includes('href="assets/styles.css"'), `${f} has no stylesheet link`);
+    assert.ok(html.includes('src="assets/app.js"'), `${f} has no script link`);
+  });
 });
 
 test('every calculator in the markup has a handler in app.js', () => {
